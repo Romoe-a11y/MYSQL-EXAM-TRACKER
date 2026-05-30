@@ -1,0 +1,1456 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL Progress Tracker</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --surface: #ffffff;
+      --ink: #1d2430;
+      --muted: #647084;
+      --line: #dfe5ef;
+      --teal: #0f9f9a;
+      --teal-dark: #08706f;
+      --coral: #ef6a5b;
+      --amber: #f3b23c;
+      --green: #49a66f;
+      --violet: #6c62d8;
+      --shadow: 0 18px 45px rgba(29, 36, 48, 0.10);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, #ffffff 0, #f7f8fb 240px),
+        var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app-shell {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 36px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 18px 0 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 56px;
+      height: 56px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      display: grid;
+      place-items: center;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.3vw, 2.05rem);
+      letter-spacing: 0;
+      line-height: 1.08;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      min-height: 40px;
+      padding: 0 12px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 5px 16px rgba(29, 36, 48, 0.06);
+    }
+
+    .btn.primary {
+      border-color: var(--teal);
+      background: var(--teal);
+      color: #fff;
+    }
+
+    .btn.danger {
+      border-color: #f0c0bc;
+      color: #a43025;
+      background: #fff7f6;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 250px repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .panel,
+    .stat-card,
+    .topic-card,
+    .log-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .progress-panel {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      gap: 10px;
+      min-height: 184px;
+    }
+
+    .ring {
+      --progress: 0deg;
+      width: 126px;
+      height: 126px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at center, #fff 0 58%, transparent 59%),
+        conic-gradient(var(--teal) var(--progress), #edf1f7 0);
+      display: grid;
+      place-items: center;
+      border: 1px solid #edf1f7;
+    }
+
+    .ring strong {
+      font-size: 1.9rem;
+      line-height: 1;
+    }
+
+    .progress-panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .stat-card {
+      padding: 16px;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      right: 14px;
+      bottom: 12px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      opacity: 0.14;
+      background: currentColor;
+    }
+
+    .stat-card h2 {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-card strong {
+      font-size: 2.1rem;
+      line-height: 1;
+      margin-top: 10px;
+    }
+
+    .stat-card span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .stat-card.teal {
+      color: var(--teal-dark);
+    }
+
+    .stat-card.coral {
+      color: var(--coral);
+    }
+
+    .stat-card.amber {
+      color: #a46b00;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(150px, 220px) minmax(150px, 220px);
+      gap: 10px;
+      margin: 12px 0 14px;
+    }
+
+    .control {
+      position: relative;
+    }
+
+    .control input,
+    .control select,
+    textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .control input:focus,
+    .control select:focus,
+    textarea:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(15, 159, 154, 0.15);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab.active {
+      border-color: var(--teal);
+      color: #fff;
+      background: var(--teal);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .topic-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .topic-card {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) 142px;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .topic-card.mastered {
+      border-color: rgba(73, 166, 111, 0.45);
+      background: linear-gradient(90deg, rgba(73, 166, 111, 0.08), #fff 28%);
+    }
+
+    .topic-card.practiced {
+      border-color: rgba(15, 159, 154, 0.42);
+    }
+
+    .chapter-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #eef7f7;
+      color: var(--teal-dark);
+      font-weight: 800;
+      border: 1px solid #d4ecea;
+    }
+
+    .topic-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .topic-title h3 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: #f0f3f8;
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .pill.practical {
+      background: #e9f7f6;
+      color: var(--teal-dark);
+    }
+
+    .pill.exam {
+      background: #fff2d8;
+      color: #8a5a00;
+    }
+
+    .pill.advanced {
+      background: #f0eefc;
+      color: #554abb;
+    }
+
+    .topic-card p {
+      margin: 6px 0 8px;
+      color: var(--muted);
+      font-size: 0.91rem;
+      line-height: 1.4;
+    }
+
+    .topic-card code {
+      background: #f3f6fa;
+      border: 1px solid #e3e9f2;
+      border-radius: 6px;
+      padding: 2px 6px;
+      color: #223044;
+      white-space: normal;
+      line-height: 1.75;
+    }
+
+    .status-select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 0 9px;
+      color: var(--ink);
+    }
+
+    .topic-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mini-progress {
+      height: 7px;
+      border-radius: 999px;
+      background: #edf1f7;
+      overflow: hidden;
+    }
+
+    .mini-progress span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--teal), var(--green));
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .log-panel {
+      padding: 14px;
+    }
+
+    .log-panel h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .next-list,
+    .learned-list,
+    .activity-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .next-list li,
+    .learned-list li,
+    .activity-list li {
+      border: 1px solid #edf1f7;
+      background: #fbfcfe;
+      border-radius: 8px;
+      padding: 9px 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.35;
+    }
+
+    .learned-list li {
+      color: #28613f;
+      background: #f2fbf5;
+      border-color: #d8efdf;
+    }
+
+    .note-form {
+      display: grid;
+      gap: 8px;
+    }
+
+    textarea {
+      min-height: 96px;
+      padding: 10px 12px;
+      resize: vertical;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 16px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #1d2430;
+      color: #fff;
+      padding: 10px 13px;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: 180ms ease;
+      max-width: min(320px, calc(100vw - 36px));
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 920px) {
+      .topbar,
+      .dashboard,
+      .main-grid,
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+    }
+
+    @media (max-width: 620px) {
+      .app-shell {
+        width: min(100% - 18px, 1180px);
+        padding-top: 12px;
+      }
+
+      .brand {
+        align-items: flex-start;
+      }
+
+      .brand-mark {
+        width: 46px;
+        height: 46px;
+      }
+
+      .topic-card {
+        grid-template-columns: 1fr;
+      }
+
+      .chapter-badge {
+        width: auto;
+        height: 34px;
+        justify-self: start;
+        padding: 0 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="38" height="38" viewBox="0 0 48 48" role="img">
+            <rect x="7" y="9" width="34" height="9" rx="4.5" fill="#0f9f9a"></rect>
+            <path d="M7 14v20c0 5 34 5 34 0V14" fill="#e9f7f6" stroke="#0f9f9a" stroke-width="2"></path>
+            <path d="M7 23c0 5 34 5 34 0M7 31c0 5 34 5 34 0" fill="none" stroke="#0f9f9a" stroke-width="2"></path>
+            <path d="M17 13l4 4 10-10" fill="none" stroke="#ef6a5b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div>
+          <h1>SQL Progress Tracker</h1>
+          <p>Market, Library, constraints, joins, views, users, and the advanced extras.</p>
+        </div>
+      </div>
+      <div class="actions" aria-label="Tracker actions">
+        <input id="importFileInput" type="file" accept="application/json,.json" hidden>
+        <button class="btn" id="importBtn" type="button" title="Import saved progress from a JSON file">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21V9m0 0 4 4m-4-4-4 4M5 5h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          Import
+        </button>
+        <button class="btn" id="exportBtn" type="button" title="Export saved progress">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          Export
+        </button>
+        <button class="btn primary" id="markCurrentBtn" type="button" title="Mark current basics as practiced">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          Seed My Work
+        </button>
+        <button class="btn primary" id="saveWorkBtn" type="button" title="Save current progress locally">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h10l2 2v16H6zM9 3v6h6V3M9 17h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          Save My Work
+        </button>
+        <button class="btn" id="restoreWorkBtn" type="button" title="Restore the last saved work snapshot">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7v6h6M20 17v-6h-6M5 13a7 7 0 0 0 12 4M19 11A7 7 0 0 0 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          Restore Save
+        </button>
+        <button class="btn danger" id="resetBtn" type="button" title="Reset locally saved progress">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          Reset
+        </button>
+      </div>
+    </header>
+
+    <section class="dashboard" aria-label="Progress dashboard">
+      <div class="panel progress-panel">
+        <div class="ring" id="progressRing"><strong id="overallPercent">0%</strong></div>
+        <p id="overallText">0 of 0 topics weighted complete</p>
+      </div>
+      <article class="stat-card teal">
+        <h2>Mastered</h2>
+        <strong id="masteredCount">0</strong>
+        <span>can explain without notes</span>
+      </article>
+      <article class="stat-card coral">
+        <h2>Next Focus</h2>
+        <strong id="nextChapter">C1</strong>
+        <span id="nextFocusLabel">first unfinished topic</span>
+      </article>
+      <article class="stat-card amber">
+        <h2>Practical Core</h2>
+        <strong id="corePercent">0%</strong>
+        <span>foundation before advanced SQL</span>
+      </article>
+    </section>
+
+    <section class="controls" aria-label="Filters">
+      <label class="control">
+        <input id="searchInput" type="search" placeholder="Search topic, command, chapter">
+      </label>
+      <label class="control">
+        <select id="statusFilter" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option value="not-started">Not started</option>
+          <option value="watched">Watched / read</option>
+          <option value="practiced">Practiced</option>
+          <option value="mastered">Mastered</option>
+        </select>
+      </label>
+      <label class="control">
+        <select id="typeFilter" aria-label="Filter by type">
+          <option value="all">All types</option>
+          <option value="practical">Practical</option>
+          <option value="exam">Exam</option>
+          <option value="advanced">Advanced</option>
+        </select>
+      </label>
+    </section>
+
+    <nav class="tabs" aria-label="Chapter filters" id="chapterTabs"></nav>
+
+    <main class="main-grid">
+      <section>
+        <div id="topicList" class="topic-list" aria-live="polite"></div>
+      </section>
+
+      <aside class="side-stack">
+        <section class="log-panel">
+          <h2>Next Things</h2>
+          <ul class="next-list" id="nextList"></ul>
+        </section>
+
+        <section class="log-panel">
+          <h2>What You Already Know</h2>
+          <ul class="learned-list" id="learnedList"></ul>
+        </section>
+
+        <section class="log-panel">
+          <h2>Exercise Log</h2>
+          <form class="note-form" id="noteForm">
+            <textarea id="noteInput" placeholder="Example: Finished Library exercise with ALTER, INSERT, SELECT, UPDATE, DELETE."></textarea>
+            <button class="btn primary" type="submit">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+              Add Log
+            </button>
+          </form>
+          <ul class="activity-list" id="activityList"></ul>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const STORAGE_KEY = "sql-progress-tracker-v1";
+
+    const statusWeights = {
+      "not-started": 0,
+      watched: 0.33,
+      practiced: 0.7,
+      mastered: 1
+    };
+
+    const statusLabels = {
+      "not-started": "Not started",
+      watched: "Watched / read",
+      practiced: "Practiced",
+      mastered: "Mastered"
+    };
+
+    const topics = [
+      {
+        id: "c1-purpose",
+        chapter: "C1",
+        chapterName: "Intro",
+        title: "SQL purpose and command families",
+        type: "exam",
+        summary: "Know what SQL does and classify commands as DDL, DML, DQL, or DCL.",
+        commands: ["DDL", "DML", "DQL", "DCL", "TRUNCATE", "CREATE USER", "GRANT", "REVOKE"],
+        seed: "practiced"
+      },
+      {
+        id: "c1-relational",
+        chapter: "C1",
+        chapterName: "Intro",
+        title: "Relational vocabulary",
+        type: "exam",
+        summary: "Relation means table, attribute means column, tuple means row, schema means structure.",
+        commands: ["table", "column", "row", "schema"],
+        seed: "watched"
+      },
+      {
+        id: "c1-theory",
+        chapter: "C1",
+        chapterName: "Intro",
+        title: "SQL versus relational algebra and history",
+        type: "exam",
+        summary: "SQL is practical; relational algebra is theoretical. Standards: SQL1, SQL-92, SQL3.",
+        commands: ["SEQUEL", "SQL1", "SQL-92", "SQL3"],
+        seed: "not-started"
+      },
+      {
+        id: "c2-databases",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "Create and delete databases",
+        type: "practical",
+        summary: "Create a database, select it, and reset it safely while practicing.",
+        commands: ["CREATE DATABASE", "DROP DATABASE", "USE"],
+        seed: "mastered"
+      },
+      {
+        id: "c2-tables",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "Create and rename tables",
+        type: "practical",
+        summary: "Build tables with columns and fix table names with rename commands.",
+        commands: ["CREATE TABLE", "RENAME TABLE"],
+        seed: "mastered"
+      },
+      {
+        id: "c2-types",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "Data types",
+        type: "practical",
+        summary: "Use text, numbers, dates, times, enum/set, and binary types correctly.",
+        commands: ["INT", "VARCHAR", "DECIMAL", "DATE", "DATETIME", "TIME", "ENUM", "SET", "BLOB"],
+        seed: "practiced"
+      },
+      {
+        id: "c2-alter",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "Alter table structure",
+        type: "practical",
+        summary: "Add, rename, modify, move, and drop columns after table creation.",
+        commands: ["ALTER TABLE", "ADD COLUMN", "RENAME COLUMN", "MODIFY", "CHANGE", "DROP COLUMN", "AFTER"],
+        seed: "mastered"
+      },
+      {
+        id: "c2-constraints-basic",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "Basic constraints",
+        type: "practical",
+        summary: "Protect data using required values, no duplicates, defaults, and simple checks.",
+        commands: ["NOT NULL", "UNIQUE", "DEFAULT", "CHECK"],
+        seed: "practiced"
+      },
+      {
+        id: "c2-primary",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "Primary keys and auto increment",
+        type: "practical",
+        summary: "Choose the main row identifier and generate numeric ids automatically.",
+        commands: ["PRIMARY KEY", "AUTO_INCREMENT"],
+        seed: "practiced"
+      },
+      {
+        id: "c2-foreign",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "Foreign keys and referential actions",
+        type: "practical",
+        summary: "Link tables and decide what happens on update or delete.",
+        commands: ["FOREIGN KEY", "REFERENCES", "ON UPDATE", "ON DELETE", "CASCADE", "RESTRICT", "SET NULL"],
+        seed: "not-started"
+      },
+      {
+        id: "c2-comments",
+        chapter: "C2",
+        chapterName: "DDL",
+        title: "SQL comments",
+        type: "exam",
+        summary: "Use one-line and multi-line comments in SQL scripts.",
+        commands: ["#", "--", "/* */"],
+        seed: "watched"
+      },
+      {
+        id: "c3-insert",
+        chapter: "C3",
+        chapterName: "DML",
+        title: "Insert rows",
+        type: "practical",
+        summary: "Insert full rows and partial rows using a column list.",
+        commands: ["INSERT INTO", "VALUES"],
+        seed: "mastered"
+      },
+      {
+        id: "c3-update-delete",
+        chapter: "C3",
+        chapterName: "DML",
+        title: "Update and delete safely",
+        type: "practical",
+        summary: "Modify and remove only the intended rows with WHERE.",
+        commands: ["UPDATE", "SET", "DELETE", "WHERE"],
+        seed: "mastered"
+      },
+      {
+        id: "c3-truncate",
+        chapter: "C3",
+        chapterName: "DML",
+        title: "Truncate tables",
+        type: "practical",
+        summary: "Empty a table and understand when foreign keys can block it.",
+        commands: ["TRUNCATE"],
+        seed: "not-started"
+      },
+      {
+        id: "c3-transactions",
+        chapter: "C3",
+        chapterName: "DML",
+        title: "Transactions",
+        type: "advanced",
+        summary: "Control saved changes manually.",
+        commands: ["AUTOCOMMIT", "COMMIT", "ROLLBACK"],
+        seed: "not-started"
+      },
+      {
+        id: "c4-select-basic",
+        chapter: "C4",
+        chapterName: "SELECT",
+        title: "Select and project columns",
+        type: "practical",
+        summary: "Show all columns or only the columns you need.",
+        commands: ["SELECT", "FROM", "*"],
+        seed: "mastered"
+      },
+      {
+        id: "c4-where",
+        chapter: "C4",
+        chapterName: "SELECT",
+        title: "Filter rows",
+        type: "practical",
+        summary: "Filter rows with comparison operators, lists, ranges, and null checks.",
+        commands: ["WHERE", "IN", "BETWEEN", "IS NULL", "IS NOT NULL"],
+        seed: "practiced"
+      },
+      {
+        id: "c4-logic",
+        chapter: "C4",
+        chapterName: "SELECT",
+        title: "Boolean logic",
+        type: "practical",
+        summary: "Combine conditions cleanly.",
+        commands: ["AND", "OR", "NOT"],
+        seed: "watched"
+      },
+      {
+        id: "c4-wildcards",
+        chapter: "C4",
+        chapterName: "SELECT",
+        title: "Wildcards and LIKE",
+        type: "practical",
+        summary: "Search text patterns using percent and underscore.",
+        commands: ["LIKE", "%", "_"],
+        seed: "not-started"
+      },
+      {
+        id: "c4-distinct-alias-sort",
+        chapter: "C4",
+        chapterName: "SELECT",
+        title: "Distinct, aliases, order, limit",
+        type: "practical",
+        summary: "Remove duplicates, rename output, sort rows, and restrict result count.",
+        commands: ["DISTINCT", "AS", "ORDER BY", "ASC", "DESC", "LIMIT"],
+        seed: "not-started"
+      },
+      {
+        id: "c4-joins",
+        chapter: "C4",
+        chapterName: "SELECT",
+        title: "Joins",
+        type: "practical",
+        summary: "Combine rows from related tables.",
+        commands: ["JOIN", "NATURAL JOIN", "LEFT JOIN", "RIGHT JOIN", "CROSS JOIN"],
+        seed: "not-started"
+      },
+      {
+        id: "c4-union-self",
+        chapter: "C4",
+        chapterName: "SELECT",
+        title: "Unions and self joins",
+        type: "practical",
+        summary: "Combine result sets and join a table with itself.",
+        commands: ["UNION", "SELF JOIN"],
+        seed: "not-started"
+      },
+      {
+        id: "c5-functions-single",
+        chapter: "C5",
+        chapterName: "Functions",
+        title: "Single-row functions",
+        type: "practical",
+        summary: "Transform text, numbers, and dates row by row.",
+        commands: ["LOWER", "UPPER", "LENGTH", "CONCAT", "ROUND", "NOW", "CURRENT_DATE", "CURRENT_TIME"],
+        seed: "not-started"
+      },
+      {
+        id: "c5-functions-aggregate",
+        chapter: "C5",
+        chapterName: "Functions",
+        title: "Aggregate functions",
+        type: "practical",
+        summary: "Calculate totals, counts, averages, minimums, and maximums.",
+        commands: ["COUNT", "SUM", "AVG", "MIN", "MAX"],
+        seed: "not-started"
+      },
+      {
+        id: "c5-group",
+        chapter: "C5",
+        chapterName: "Functions",
+        title: "Group by and having",
+        type: "practical",
+        summary: "Group rows and filter groups after aggregation.",
+        commands: ["GROUP BY", "HAVING"],
+        seed: "not-started"
+      },
+      {
+        id: "c5-rollup",
+        chapter: "C5",
+        chapterName: "Functions",
+        title: "Rollup",
+        type: "advanced",
+        summary: "Add subtotal and total rows to grouped results.",
+        commands: ["WITH ROLLUP"],
+        seed: "not-started"
+      },
+      {
+        id: "c6-subqueries",
+        chapter: "C6",
+        chapterName: "Subqueries",
+        title: "Subqueries",
+        type: "practical",
+        summary: "Use one query inside another.",
+        commands: ["subquery", "IN", "ANY", "SOME", "ALL", "EXISTS"],
+        seed: "not-started"
+      },
+      {
+        id: "c7-views",
+        chapter: "C7",
+        chapterName: "Views",
+        title: "Views",
+        type: "practical",
+        summary: "Save a SELECT as a virtual table.",
+        commands: ["CREATE VIEW", "ALTER VIEW", "DROP VIEW"],
+        seed: "not-started"
+      },
+      {
+        id: "c7-updatable",
+        chapter: "C7",
+        chapterName: "Views",
+        title: "Updatable view rules",
+        type: "exam",
+        summary: "Know when INSERT, UPDATE, or DELETE can work through a view.",
+        commands: ["DISTINCT", "GROUP BY", "HAVING", "UNION"],
+        seed: "not-started"
+      },
+      {
+        id: "c8-users",
+        chapter: "C8",
+        chapterName: "DCL",
+        title: "Users and privileges",
+        type: "practical",
+        summary: "Create users, give rights, inspect rights, and remove rights.",
+        commands: ["CREATE USER", "GRANT", "SHOW GRANTS", "REVOKE", "FLUSH PRIVILEGES"],
+        seed: "not-started"
+      },
+      {
+        id: "c8-manage-users",
+        chapter: "C8",
+        chapterName: "DCL",
+        title: "Manage users",
+        type: "exam",
+        summary: "Change passwords, rename users, and remove users.",
+        commands: ["SET PASSWORD", "RENAME USER", "DROP USER"],
+        seed: "not-started"
+      },
+      {
+        id: "extra-indexes",
+        chapter: "EX",
+        chapterName: "Extras",
+        title: "Indexes",
+        type: "advanced",
+        summary: "Speed up lookups with indexes and understand the tradeoff.",
+        commands: ["INDEX", "CREATE INDEX"],
+        seed: "not-started"
+      },
+      {
+        id: "extra-procedures",
+        chapter: "EX",
+        chapterName: "Extras",
+        title: "Stored procedures",
+        type: "advanced",
+        summary: "Save reusable SQL logic inside the database.",
+        commands: ["PROCEDURE", "CALL"],
+        seed: "not-started"
+      },
+      {
+        id: "extra-triggers",
+        chapter: "EX",
+        chapterName: "Extras",
+        title: "Triggers",
+        type: "advanced",
+        summary: "Run automatic logic when table rows change.",
+        commands: ["TRIGGER", "BEFORE", "AFTER"],
+        seed: "not-started"
+      }
+    ];
+
+    let state = loadState();
+    let activeChapter = "all";
+
+    const els = {
+      topicList: document.getElementById("topicList"),
+      chapterTabs: document.getElementById("chapterTabs"),
+      searchInput: document.getElementById("searchInput"),
+      statusFilter: document.getElementById("statusFilter"),
+      typeFilter: document.getElementById("typeFilter"),
+      overallPercent: document.getElementById("overallPercent"),
+      overallText: document.getElementById("overallText"),
+      progressRing: document.getElementById("progressRing"),
+      masteredCount: document.getElementById("masteredCount"),
+      corePercent: document.getElementById("corePercent"),
+      nextChapter: document.getElementById("nextChapter"),
+      nextFocusLabel: document.getElementById("nextFocusLabel"),
+      nextList: document.getElementById("nextList"),
+      learnedList: document.getElementById("learnedList"),
+      activityList: document.getElementById("activityList"),
+      noteForm: document.getElementById("noteForm"),
+      noteInput: document.getElementById("noteInput"),
+      resetBtn: document.getElementById("resetBtn"),
+      importBtn: document.getElementById("importBtn"),
+      importFileInput: document.getElementById("importFileInput"),
+      exportBtn: document.getElementById("exportBtn"),
+      markCurrentBtn: document.getElementById("markCurrentBtn"),
+      saveWorkBtn: document.getElementById("saveWorkBtn"),
+      restoreWorkBtn: document.getElementById("restoreWorkBtn"),
+      toast: document.getElementById("toast")
+    };
+
+    init();
+
+    function init() {
+      renderTabs();
+      bindEvents();
+      render();
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            statuses: { ...defaultStatuses("not-started"), ...(parsed.statuses || {}) },
+            notes: Array.isArray(parsed.notes) ? parsed.notes : [],
+            lastSavedWork: normalizeSnapshot(parsed.lastSavedWork)
+          };
+        } catch (error) {
+          return { statuses: defaultStatuses("not-started"), notes: [], lastSavedWork: null };
+        }
+      }
+      return { statuses: defaultStatuses("seed"), notes: [], lastSavedWork: null };
+    }
+
+    function defaultStatuses(mode) {
+      const statuses = {};
+      topics.forEach((topic) => {
+        statuses[topic.id] = mode === "seed" ? topic.seed : "not-started";
+      });
+      return statuses;
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function bindEvents() {
+      [els.searchInput, els.statusFilter, els.typeFilter].forEach((el) => {
+        el.addEventListener("input", render);
+      });
+
+      els.noteForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const text = els.noteInput.value.trim();
+        if (!text) return;
+        state.notes.unshift({
+          id: Date.now(),
+          text,
+          date: new Date().toLocaleString()
+        });
+        els.noteInput.value = "";
+        saveState();
+        renderActivity();
+        showToast("Exercise log saved locally.");
+      });
+
+      els.resetBtn.addEventListener("click", () => {
+        if (!confirm("Reset all saved SQL progress on this device?")) return;
+        state = { statuses: defaultStatuses("not-started"), notes: [], lastSavedWork: null };
+        saveState();
+        render();
+        showToast("Progress reset.");
+      });
+
+      els.markCurrentBtn.addEventListener("click", () => {
+        if (!state.lastSavedWork) {
+          state.lastSavedWork = createSnapshot();
+        }
+        state.statuses = defaultStatuses("seed");
+        saveState();
+        render();
+        showToast("Seed applied. Last saved work is backed up.");
+      });
+
+      els.saveWorkBtn.addEventListener("click", () => {
+        state.lastSavedWork = createSnapshot();
+        saveState();
+        showToast("Current progress saved and backed up.");
+      });
+
+      els.restoreWorkBtn.addEventListener("click", () => {
+        if (!state.lastSavedWork) {
+          showToast("No saved work backup yet.");
+          return;
+        }
+        state.statuses = { ...defaultStatuses("not-started"), ...state.lastSavedWork.statuses };
+        state.notes = Array.isArray(state.lastSavedWork.notes) ? [...state.lastSavedWork.notes] : [];
+        saveState();
+        render();
+        showToast("Last saved work restored.");
+      });
+
+      els.exportBtn.addEventListener("click", () => {
+        saveState();
+        const payload = JSON.stringify({
+          app: "SQL Progress Tracker",
+          exportedAt: new Date().toISOString(),
+          state
+        }, null, 2);
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const date = new Date().toISOString().slice(0, 10);
+        link.href = url;
+        link.download = `sql-progress-${date}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        showToast("Progress exported as a file.");
+      });
+
+      els.importBtn.addEventListener("click", () => {
+        els.importFileInput.click();
+      });
+
+      els.importFileInput.addEventListener("change", async () => {
+        const file = els.importFileInput.files && els.importFileInput.files[0];
+        els.importFileInput.value = "";
+        if (!file) return;
+
+        try {
+          const imported = JSON.parse(await file.text());
+          const importedState = normalizeImportedState(imported);
+          if (!importedState) {
+            showToast("Import failed: invalid progress file.");
+            return;
+          }
+          state = importedState;
+          saveState();
+          render();
+          showToast("Progress imported successfully.");
+        } catch (error) {
+          showToast("Import failed: invalid JSON file.");
+        }
+      });
+    }
+
+    function normalizeImportedState(imported) {
+      const rawState = imported && imported.state ? imported.state : imported;
+      if (!rawState || typeof rawState !== "object" || typeof rawState.statuses !== "object") {
+        return null;
+      }
+
+      const validStatuses = new Set(Object.keys(statusLabels));
+      const statuses = defaultStatuses("not-started");
+      topics.forEach((topic) => {
+        const importedStatus = rawState.statuses[topic.id];
+        if (validStatuses.has(importedStatus)) {
+          statuses[topic.id] = importedStatus;
+        }
+      });
+
+      const notes = Array.isArray(rawState.notes)
+        ? rawState.notes
+            .filter((note) => note && typeof note.text === "string")
+            .map((note) => ({
+              id: note.id || Date.now(),
+              text: note.text,
+              date: note.date || new Date().toLocaleString()
+            }))
+        : [];
+
+      return {
+        statuses,
+        notes,
+        lastSavedWork: normalizeSnapshot(rawState.lastSavedWork)
+      };
+    }
+
+    function createSnapshot() {
+      return {
+        savedAt: new Date().toISOString(),
+        statuses: { ...state.statuses },
+        notes: Array.isArray(state.notes) ? [...state.notes] : []
+      };
+    }
+
+    function normalizeSnapshot(snapshot) {
+      if (!snapshot || typeof snapshot !== "object" || typeof snapshot.statuses !== "object") {
+        return null;
+      }
+
+      const validStatuses = new Set(Object.keys(statusLabels));
+      const statuses = defaultStatuses("not-started");
+      topics.forEach((topic) => {
+        const importedStatus = snapshot.statuses[topic.id];
+        if (validStatuses.has(importedStatus)) {
+          statuses[topic.id] = importedStatus;
+        }
+      });
+
+      const notes = Array.isArray(snapshot.notes)
+        ? snapshot.notes
+            .filter((note) => note && typeof note.text === "string")
+            .map((note) => ({
+              id: note.id || Date.now(),
+              text: note.text,
+              date: note.date || new Date().toLocaleString()
+            }))
+        : [];
+
+      return {
+        savedAt: snapshot.savedAt || new Date().toISOString(),
+        statuses,
+        notes
+      };
+    }
+
+    function renderTabs() {
+      const chapters = [
+        { id: "all", label: "All" },
+        ...Array.from(new Map(topics.map((t) => [t.chapter, t.chapterName])).entries())
+          .map(([id, name]) => ({ id, label: `${id} ${name}` }))
+      ];
+
+      els.chapterTabs.innerHTML = "";
+      chapters.forEach((chapter) => {
+        const button = document.createElement("button");
+        button.className = "tab" + (chapter.id === activeChapter ? " active" : "");
+        button.type = "button";
+        button.textContent = chapter.label;
+        button.addEventListener("click", () => {
+          activeChapter = chapter.id;
+          renderTabs();
+          renderTopics();
+        });
+        els.chapterTabs.appendChild(button);
+      });
+    }
+
+    function render() {
+      renderStats();
+      renderTopics();
+      renderSidebars();
+      renderActivity();
+    }
+
+    function renderStats() {
+      const total = topics.reduce((sum, topic) => sum + statusWeights[state.statuses[topic.id]], 0);
+      const percent = Math.round((total / topics.length) * 100);
+      const mastered = topics.filter((topic) => state.statuses[topic.id] === "mastered").length;
+      const coreTopics = topics.filter((topic) => topic.type !== "advanced");
+      const coreTotal = coreTopics.reduce((sum, topic) => sum + statusWeights[state.statuses[topic.id]], 0);
+      const corePercent = Math.round((coreTotal / coreTopics.length) * 100);
+      const next = topics.find((topic) => state.statuses[topic.id] !== "mastered") || topics[0];
+
+      els.overallPercent.textContent = `${percent}%`;
+      els.overallText.textContent = `${weightedDone(total)} of ${topics.length} topics weighted complete`;
+      els.progressRing.style.setProperty("--progress", `${percent * 3.6}deg`);
+      els.masteredCount.textContent = mastered;
+      els.corePercent.textContent = `${corePercent}%`;
+      els.nextChapter.textContent = next.chapter;
+      els.nextFocusLabel.textContent = next.title;
+    }
+
+    function renderTopics() {
+      const filtered = getFilteredTopics();
+      els.topicList.innerHTML = "";
+
+      if (!filtered.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No topics match the current filters.";
+        els.topicList.appendChild(empty);
+        return;
+      }
+
+      filtered.forEach((topic) => {
+        const status = state.statuses[topic.id];
+        const article = document.createElement("article");
+        article.className = `topic-card ${status}`;
+
+        const badge = document.createElement("div");
+        badge.className = "chapter-badge";
+        badge.textContent = topic.chapter;
+
+        const body = document.createElement("div");
+        const header = document.createElement("div");
+        header.className = "topic-title";
+        header.innerHTML = `<h3>${escapeHtml(topic.title)}</h3><span class="pill ${topic.type}">${escapeHtml(topic.type)}</span>`;
+
+        const summary = document.createElement("p");
+        summary.textContent = topic.summary;
+
+        const commands = document.createElement("div");
+        commands.innerHTML = topic.commands.map((cmd) => `<code>${escapeHtml(cmd)}</code>`).join(" ");
+
+        body.append(header, summary, commands);
+
+        const controls = document.createElement("div");
+        controls.className = "topic-actions";
+        const select = document.createElement("select");
+        select.className = "status-select";
+        select.setAttribute("aria-label", `Status for ${topic.title}`);
+        Object.entries(statusLabels).forEach(([value, label]) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = label;
+          if (value === status) option.selected = true;
+          select.appendChild(option);
+        });
+        select.addEventListener("change", () => {
+          state.statuses[topic.id] = select.value;
+          saveState();
+          render();
+          showToast(`${topic.title}: ${statusLabels[select.value]}`);
+        });
+
+        const mini = document.createElement("div");
+        mini.className = "mini-progress";
+        mini.innerHTML = `<span style="width:${statusWeights[status] * 100}%"></span>`;
+
+        controls.append(select, mini);
+        article.append(badge, body, controls);
+        els.topicList.appendChild(article);
+      });
+    }
+
+    function getFilteredTopics() {
+      const query = els.searchInput.value.trim().toLowerCase();
+      const status = els.statusFilter.value;
+      const type = els.typeFilter.value;
+
+      return topics.filter((topic) => {
+        const matchesChapter = activeChapter === "all" || topic.chapter === activeChapter;
+        const matchesStatus = status === "all" || state.statuses[topic.id] === status;
+        const matchesType = type === "all" || topic.type === type;
+        const haystack = [
+          topic.chapter,
+          topic.chapterName,
+          topic.title,
+          topic.summary,
+          topic.type,
+          ...topic.commands
+        ].join(" ").toLowerCase();
+        const matchesQuery = !query || haystack.includes(query);
+        return matchesChapter && matchesStatus && matchesType && matchesQuery;
+      });
+    }
+
+    function renderSidebars() {
+      const next = topics.filter((topic) => state.statuses[topic.id] !== "mastered").slice(0, 5);
+      els.nextList.innerHTML = next.length
+        ? next.map((topic) => `<li><strong>${escapeHtml(topic.chapter)}</strong> ${escapeHtml(topic.title)}</li>`).join("")
+        : `<li>All listed topics are mastered.</li>`;
+
+      const learned = topics.filter((topic) => ["practiced", "mastered"].includes(state.statuses[topic.id])).slice(0, 8);
+      els.learnedList.innerHTML = learned.length
+        ? learned.map((topic) => `<li>${escapeHtml(topic.title)}</li>`).join("")
+        : `<li>Mark practiced topics to build this list.</li>`;
+    }
+
+    function renderActivity() {
+      els.activityList.innerHTML = "";
+      if (!state.notes.length) {
+        const li = document.createElement("li");
+        li.textContent = "No exercise logs yet.";
+        els.activityList.appendChild(li);
+        return;
+      }
+
+      state.notes.slice(0, 6).forEach((note) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${escapeHtml(note.date)}</strong><br>${escapeHtml(note.text)}`;
+        els.activityList.appendChild(li);
+      });
+    }
+
+    function weightedDone(value) {
+      return Number.isInteger(value) ? String(value) : value.toFixed(1);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => {
+        els.toast.classList.remove("show");
+      }, 1800);
+    }
+  </script>
+</body>
+</html>
